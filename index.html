@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bus Racing Game - 2 Players</title>
+    <style>
+        body {
+            background: #333;
+            text-align: center;
+            font-family: Arial;
+        }
+        h1 {
+            color: #ff6b00;
+        }
+        #gameCanvas {
+            background: #4a4a4a;
+            border: 5px solid #ff6b00;
+        }
+        .player-info {
+            color: white;
+            margin: 10px;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 20px;
+            background: #00ff00;
+            border: none;
+            cursor: pointer;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚌 BUS RACING GAME 🚌</h1>
+    
+    <div class="player-info">
+        <span style="color: #00ff00;">Player 1: W/A/S/D Keys (Green Bus)</span>
+        <span style="color: #ff6b00; margin-left: 30px;">Player 2: Arrow Keys (Orange Bus)</span>
+    </div>
+    
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
+    
+    <br>
+    <button onclick="startGame()">🎮 START GAME</button>
+    <h2 id="winner" style="color: white;"></h2>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameRunning = false;
+        let animationId;
+
+        // Player 1 - Green Bus
+        const player1 = {
+            x: 50, y: 100, width: 60, height: 30,
+            color: '#00ff00', speed: 5, score: 0
+        };
+
+        // Player 2 - Orange Bus
+        const player2 = {
+            x: 50, y: 350, width: 60, height: 30,
+            color: '#ff6b00', speed: 5, score: 0
+        };
+
+        // Enemy cars
+        const enemies = [];
+        const enemySpeed = 4;
+
+        // Keys
+        const keys = {};
+
+        // Event listeners
+        document.addEventListener('keydown', (e) => keys[e.key] = true);
+        document.addEventListener('keyup', (e) => keys[e.key] = false);
+
+        // Initialize enemies
+        function spawnEnemy() {
+            const lane = Math.floor(Math.random() * 4);
+            const yPos = [50, 170, 290, 410][lane];
+            enemies.push({
+                x: 850,
+                y: yPos,
+                width: 40,
+                height: 25,
+                color: '#ff0000'
+            });
+        }
+
+        function checkCollision(player, enemy) {
+            return player.x < enemy.x + enemy.width &&
+                   player.x + player.width > enemy.x &&
+                   player.y < enemy.y + enemy.height &&
+                   player.y + player.height > enemy.y;
+        }
+
+        // Main game function - FIXED!
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            // Clear canvas
+            ctx.fillStyle = '#4a4a4a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw road lanes
+            ctx.strokeStyle = '#ffffff';
+            ctx.setLineDash([20, 20]);
+            ctx.lineWidth = 3;
+            for (let i = 1; i < 4; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * 125);
+                ctx.lineTo(canvas.width, i * 125);
+                ctx.stroke();
+            }
+            ctx.setLineDash([]);
+
+            // Player 1 movement (WASD)
+            if (keys['w'] && player1.y > 0) player1.y -= player1.speed;
+            if (keys['s'] && player1.y < canvas.height - player1.height) player1.y += player1.speed;
+            if (keys['a'] && player1.x > 0) player1.x -= player1.speed;
+            if (keys['d'] && player1.x < canvas.width - player1.width) player1.x += player1.speed;
+
+            // Player 2 movement (Arrow Keys)
+            if (keys['ArrowUp'] && player2.y > 0) player2.y -= player2.speed;
+            if (keys['ArrowDown'] && player2.y < canvas.height - player2.height) player2.y += player2.speed;
+            if (keys['ArrowLeft'] && player2.x > 0) player2.x -= player2.speed;
+            if (keys['ArrowRight'] && player2.x < canvas.width - player2.width) player2.x += player2.speed;
+
+            // Draw Player 1 (Green Bus)
+            ctx.fillStyle = player1.color;
+            ctx.fillRect(player1.x, player1.y, player1.width, player1.height);
+            ctx.fillStyle = '#009900';
+            ctx.fillRect(player1.x + 10, player1.y - 8, 20, 8);
+
+            // Draw Player 2 (Orange Bus)
+            ctx.fillStyle = player2.color;
+            ctx.fillRect(player2.x, player2.y, player2.width, player2.height);
+            ctx.fillStyle = '#cc5500';
+            ctx.fillRect(player2.x + 10, player2.y - 8, 20, 8);
+
+            // Draw and move enemies
+            ctx.fillStyle = '#ff0000';
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let enemy = enemies[i];
+                enemy.x -= enemySpeed;
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+
+                // Remove off-screen enemies
+                if (enemy.x + enemy.width < 0) {
+                    enemies.splice(i, 1);
+                    player1.score++;
+                    player2.score++;
+                }
+
+                // Collision detection
+                if (checkCollision(player1, enemy) || checkCollision(player2, enemy)) {
+                    gameRunning = false;
+                    document.getElementById('winner').innerText = '💥 CRASH! GAME OVER!';
+                    return;
+                }
+            }
+
+            // Spawn new enemies
+            if (Math.random() < 0.03) {
+                spawnEnemy();
+            }
+
+            // Show scores
+            ctx.fillStyle = 'white';
+            ctx.font = '20px Arial';
+            ctx.fillText('P1 Score: ' + player1.score, 10, 30);
+            ctx.fillText('P2 Score: ' + player2.score, 10, 60);
+
+            // Check winner
+            if (player1.score >= 10 || player2.score >= 10) {
+                gameRunning = false;
+                const winner = player1.score >= 10 ? 'Player 1 (Green)' : 'Player 2 (Orange)';
+                document.getElementById('winner').innerText = '🏆 ' + winner + ' WINS!';
+                return;
+            }
+
+            // FIXED: Call gameLoop correctly
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            // Stop any existing game
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+
+            // Reset
+            player1.x = 50;
+            player1.y = 100;
+            player1.score = 0;
+            
+            player2.x = 50;
+            player2.y = 350;
+            player2.score = 0;
+            
+            enemies.length = 0;
+            
+            document.getElementById('winner').innerText = '';
+            
+            // Start game
+            gameRunning = true;
+            gameLoop();
+        }
+
+        // Initial draw
+        ctx.fillStyle = '#4a4a4a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'white';
+        ctx.font = '30px Arial';
+        ctx.fillText('Press START GAME to play!', 180, 250);
+    </script>
+</body>
+</html>
